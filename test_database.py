@@ -1,64 +1,51 @@
-"""Tests for database module."""
-
 import pytest
 from database import ProductDatabase, SupplierDatabase, Product, Supplier
 from config import Config
 
 
 class TestProductDatabase:
-    """Test ProductDatabase functionality."""
-
     def test_find_product_by_name(self):
-        """Test finding products by name."""
-        product = ProductDatabase.find_product_by_name("Wireless Earbuds")
+        product = ProductDatabase.find_product_by_name("Беспроводные наушники")
         assert product is not None
         assert isinstance(product, Product)
-        assert product.name == "Wireless Earbuds"
+        assert product.name == "Беспроводные наушники"
 
-        product = ProductDatabase.find_product_by_name("Smart Watch")
+        product = ProductDatabase.find_product_by_name("Смарт-часы")
         assert product is not None
         assert isinstance(product, Product)
-        assert product.name == "Smart Watch"
+        assert product.name == "Смарт-часы"
 
-        # Test with partial match
-        product = ProductDatabase.find_product_by_name("earbuds")
+        product = ProductDatabase.find_product_by_name("наушники")
         assert product is not None
 
-        # Test with case insensitivity
-        product = ProductDatabase.find_product_by_name("WIRELESS EARBUDS")
+        product = ProductDatabase.find_product_by_name("БЕСПРОВОДНЫЕ НАУШНИКИ")
         assert product is not None
 
-        # Test with non-existent product
-        product = ProductDatabase.find_product_by_name("Non-existent Product")
+        product = ProductDatabase.find_product_by_name("Некоторый несуществующий продукт")
         assert product is None
 
     def test_generate_supplier_prices(self):
-        """Test generating supplier prices."""
-        product = ProductDatabase.find_product_by_name("Wireless Earbuds")
+        product = ProductDatabase.find_product_by_name("Беспроводные наушники")
         assert product is not None
 
         suppliers = ProductDatabase.generate_supplier_prices(product, Config)
         assert len(suppliers) > 0
 
         for supplier in suppliers:
-            # Basic checks
             assert "id" in supplier
             assert "name" in supplier
             assert "country" in supplier
 
-            # Price fields should be numeric
             assert isinstance(supplier["price_usd"], float)
             assert isinstance(supplier["price_rub"], float)
             assert isinstance(supplier["final_price_usd"], float)
             assert isinstance(supplier["final_price_rub"], float)
 
-            # Price should be positive
             assert supplier["price_usd"] > 0
             assert supplier["price_rub"] > 0
             assert supplier["final_price_usd"] > 0
             assert supplier["final_price_rub"] > 0
 
-            # Costs should be non-negative
             assert supplier["delivery_cost_percent"] >= 0
             assert supplier["delivery_cost_rub"] >= 0
             assert supplier["storage_cost_percent"] >= 0
@@ -67,8 +54,7 @@ class TestProductDatabase:
             assert supplier["additional_costs_rub"] >= 0
 
     def test_generate_product_code(self):
-        """Test product code generation."""
-        product = ProductDatabase.find_product_by_name("Wireless Earbuds")
+        product = ProductDatabase.find_product_by_name("Беспроводные наушники")
         assert product is not None
 
         suppliers = ProductDatabase.generate_supplier_prices(product, Config)
@@ -80,10 +66,7 @@ class TestProductDatabase:
 
 
 class TestSupplierDatabase:
-    """Test SupplierDatabase functionality."""
-
     def test_get_all_suppliers(self):
-        """Test getting all suppliers."""
         suppliers = SupplierDatabase.get_all_suppliers()
         assert len(suppliers) > 0
 
@@ -94,7 +77,6 @@ class TestSupplierDatabase:
             assert supplier.country is not None
 
     def test_supplier_attributes(self):
-        """Test that all suppliers have required attributes."""
         suppliers = SupplierDatabase.get_all_suppliers()
         assert len(suppliers) > 0
 
@@ -114,24 +96,17 @@ class TestSupplierDatabase:
 
 
 class TestConfig:
-    """Test configuration class."""
-
     def test_config_validation(self):
-        """Test configuration validation."""
         errors = Config.validate()
 
-        # Check that we don't have errors for required fields that should be optional
         if len(errors) > 0:
-            # We might have errors if .env file is not set, which is acceptable for tests
             print(f"Configuration errors: {errors}")
 
     def test_config_is_valid(self):
-        """Test configuration validity check."""
         is_valid = Config.is_valid()
         assert isinstance(is_valid, bool)
 
     def test_config_constants(self):
-        """Test that configuration constants are properly set."""
         assert Config.MAX_PRODUCTS_PER_REQUEST > 0
         assert Config.MIN_SEARCH_TEXT_LENGTH > 0
         assert Config.MAX_SUPPLIERS_PER_PRODUCT > 0

@@ -1,5 +1,3 @@
-"""Main Telegram bot for Market Research Analyzer."""
-
 import os
 import asyncio
 import logging
@@ -14,7 +12,6 @@ from database import product_db, Product
 from excel_generator import report_generator
 from groq_analyzer import groq_analyzer
 
-# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -23,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send welcome message to new users."""
     welcome_text = """
 📊 **Бот Анализа Рынка Поставщиков**
 
@@ -36,13 +32,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4. Предоставлю AI рекомендации по поставщикам
 
 **Примеры:**
-`wireless earbuds, smart watch, yoga mat`
-`phone case, power bank, led lamp`
-`backpack, water bottle, fitness tracker`
+`беспроводные наушники, смарт-часы, йогурная матраца`
+`чехол для телефона, портативный аккумулятор, настольная лампа led`
+`рюкзак, нержавеющая стальная бутылка, фитнес-трекер`
 
 **Я анализирую:**
 • Цены от разных стран
-• Время доставки и MOQ
+• Время доставки и МОК
 • Рейтинги поставщиков и надежность
 • Полные расчеты стоимости
 • Оценка рисков
@@ -54,7 +50,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send help information about bot usage."""
     help_text = """
 📋 **Использование Бота Анализа Рынка**
 
@@ -70,10 +65,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Максимум 5 продуктов за запрос
 
 **Примеры поиска:**
-• `wireless earbuds, smart watch`
-• `yoga mat, fitness tracker`
-• `led desk lamp, usb charger`
-• `backpack, water bottle, phone case`
+• `беспроводные наушники, смарт-часы`
+• `йогурная матраца, фитнес-трекер`
+• `настольная лампа led, usb зарядное устройство`
+• `рюкзак, нержавеющая стальная бутылка, чехол для телефона`
 
 **Что вы получите:**
 1. **Отчет Excel** с подробным анализом поставщиков
@@ -89,37 +84,36 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send example product search queries."""
     examples_text = """
 🎯 **Примеры продуктов для анализа:**
 
 **Электроника:**
-• Wireless Earbuds
-• Smart Watch
-• Bluetooth Speaker
-• Power Bank
-• LED Desk Lamp
+• Беспроводные наушники
+• Смарт-часы
+• Bluetooth колонка
+• Портативный аккумулятор
+• Настольная лампа LED
 
 **Фитнес и спорт:**
-• Yoga Mat
-• Fitness Tracker
-• Water Bottle
-• Resistance Bands
-• Smart Scale
+• Йогурная матраца
+• Фитнес-трекер
+• Нержавеющая стальная бутылка
+• Упругие резинки
+• Смарт-весы
 
 **Дом и офис:**
-• Desk Organizer
-• USB Hub
-• Wireless Charger
-• Desk Fan
-• Monitor Stand
+• Органайзер для письменного стола
+• USB-хаб
+• Беспроводной зарядный станция
+• Настольный вентилятор
+• Подставка для монитора
 
 **Мода и аксессуары:**
-• Backpack
-• Phone Case
-• Sunglasses
-• Wallet
-• Watch Strap
+• Рюкзак
+• Чехол для телефона
+• Солнечные очки
+• Кошелек
+• Ремень для часов
 
 **Просто скопируйте и вставьте любой из них, чтобы начать анализ!**
     """
@@ -128,7 +122,6 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle product search requests from users."""
     user = update.effective_user
     search_text = update.message.text.strip()
 
@@ -187,7 +180,6 @@ async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 def _search_products(product_names: list) -> tuple:
-    """Search for products in database."""
     found_products = []
     not_found_products = []
 
@@ -202,7 +194,6 @@ def _search_products(product_names: list) -> tuple:
 
 
 def _format_search_status(found_products: list, not_found_products: list) -> str:
-    """Format search status message."""
     status_text = (
         f"\n📊 **Результаты поиска:**\n"
         f"• Найдено: {len(found_products)} продукт(ов)\n"
@@ -218,7 +209,6 @@ def _format_search_status(found_products: list, not_found_products: list) -> str
 
 
 async def _process_products(found_products: list) -> list:
-    """Process products to get supplier prices."""
     products_data = []
 
     for product in found_products:
@@ -233,7 +223,6 @@ async def _process_products(found_products: list) -> list:
 
 
 async def send_analysis_results(update: Update, analyses: list, report_path: str):
-    """Send analysis results to user."""
     try:
         analysis_header = """
 📈 **РЕЗУЛЬТАТЫ АНАЛИЗА ПОСТАВЩИКОВ**
@@ -263,7 +252,7 @@ async def send_analysis_results(update: Update, analyses: list, report_path: str
         with open(report_path, 'rb') as report_file:
             await update.message.reply_document(
                 document=report_file,
-                filename=f"supplier_analysis_report.xlsx",
+                filename=f"анализ_поставщиков.xlsx",
                 caption="📈 Полный отчет анализа поставщиков"
             )
 
@@ -296,17 +285,13 @@ async def send_analysis_results(update: Update, analyses: list, report_path: str
 
 
 def main():
-    """Main bot entry point."""
-    # Validate configuration
     config_errors = Config.validate()
     if config_errors:
         logger.error("❌ Configuration errors: %s", ", ".join(config_errors))
         return
 
-    # Create temporary directory if not exists
     Path(Config.TEMP_DIR).mkdir(exist_ok=True)
 
-    # Initialize and run bot
     application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start_command))
@@ -318,7 +303,7 @@ def main():
         handle_product_search
     ))
 
-    logger.info("🤖 Market Research Analyzer Bot запущен...")
+    logger.info("🤖 Бот Анализа Рынка Поставщиков запущен...")
     logger.info("Готов анализировать поставщиков!")
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)

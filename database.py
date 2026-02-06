@@ -1,5 +1,3 @@
-"""Database module for product and supplier data management."""
-
 import random
 from typing import List, Dict, Any
 from datetime import datetime
@@ -7,8 +5,6 @@ from config import Config
 
 
 class Supplier:
-    """Data class representing a supplier."""
-
     def __init__(self, supplier_data: Dict[str, Any]):
         self.id: str = supplier_data["id"]
         self.name: str = supplier_data["name"]
@@ -25,8 +21,6 @@ class Supplier:
 
 
 class Product:
-    """Data class representing a product."""
-
     def __init__(self, product_data: Dict[str, Any]):
         self.id: str = product_data["id"]
         self.name: str = product_data["name"]
@@ -40,8 +34,6 @@ class Product:
 
 
 class SupplierDatabase:
-    """Database for managing supplier data."""
-
     SUPPLIERS_DATA = [
         {
             "id": "SUP001",
@@ -187,120 +179,117 @@ class SupplierDatabase:
 
     @classmethod
     def get_all_suppliers(cls) -> List[Supplier]:
-        """Get all suppliers as Supplier objects."""
         return [Supplier(data) for data in cls.SUPPLIERS_DATA]
 
 
 class ProductDatabase:
-    """Database for managing product data and price generation."""
-
     PRODUCTS_DATA = [
         {
             "id": "PROD001",
-            "name": "Wireless Earbuds",
-            "full_name": "Premium Wireless Bluetooth 5.0 Earbuds with Charging Case",
-            "category": "Electronics",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Беспроводные наушники",
+            "full_name": "Премиум беспроводные Bluetooth 5.0 наушники с зарядным кейсом",
+            "category": "Электроника",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 45.99,
             "weight_kg": 0.05,
             "dimensions_cm": "6x4x3"
         },
         {
             "id": "PROD002",
-            "name": "Smart Watch",
-            "full_name": "Smart Watch with Heart Rate Monitor and GPS",
-            "category": "Electronics",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Смарт-часы",
+            "full_name": "Смарт-часы с монитором пульса и GPS",
+            "category": "Электроника",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 89.99,
             "weight_kg": 0.08,
             "dimensions_cm": "4x4x1"
         },
         {
             "id": "PROD003",
-            "name": "Yoga Mat",
-            "full_name": "Premium Non-Slip Yoga Mat 183x61x0.6 cm",
-            "category": "Fitness",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Йогурная матраца",
+            "full_name": "Премиум антискользящая йогурная матраца 183x61x0.6 см",
+            "category": "Фитнес",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 24.99,
             "weight_kg": 1.2,
             "dimensions_cm": "183x61x6"
         },
         {
             "id": "PROD004",
-            "name": "LED Desk Lamp",
-            "full_name": "USB LED Desk Lamp with Adjustable Brightness",
-            "category": "Home & Office",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Настольная лампа LED",
+            "full_name": "USB настольная лампа LED с регулируемой яркостью",
+            "category": "Дом и офис",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 19.99,
             "weight_kg": 0.6,
             "dimensions_cm": "35x15x15"
         },
         {
             "id": "PROD005",
-            "name": "Stainless Steel Bottle",
-            "full_name": "Insulated Stainless Steel Water Bottle 750ml",
-            "category": "Sports",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Нержавеющая стальная бутылка",
+            "full_name": "Утепленная стальная бутылка 750мл",
+            "category": "Спорт",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 29.99,
             "weight_kg": 0.35,
             "dimensions_cm": "25x8x8"
         },
         {
             "id": "PROD006",
-            "name": "Portable Power Bank",
-            "full_name": "10000mAh Portable Power Bank with Fast Charging",
-            "category": "Electronics",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Портативный аккумулятор",
+            "full_name": "10000mAh портативный аккумулятор с быстрой зарядкой",
+            "category": "Электроника",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 34.99,
             "weight_kg": 0.22,
             "dimensions_cm": "10x6x2"
         },
         {
             "id": "PROD007",
-            "name": "Phone Case",
-            "full_name": "Shockproof Phone Case for iPhone 14/15",
-            "category": "Accessories",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Чехол для телефона",
+            "full_name": "Антиударный чехол для iPhone 14/15",
+            "category": "Аксессуары",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 12.99,
             "weight_kg": 0.03,
             "dimensions_cm": "16x8x1"
         },
         {
             "id": "PROD008",
-            "name": "Bluetooth Speaker",
-            "full_name": "Waterproof Portable Bluetooth Speaker",
-            "category": "Electronics",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Bluetooth колонка",
+            "full_name": "Водонепроницаемая портативная Bluetooth колонка",
+            "category": "Электроника",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 39.99,
             "weight_kg": 0.45,
             "dimensions_cm": "12x12x6"
         },
         {
             "id": "PROD009",
-            "name": "Fitness Tracker",
-            "full_name": "Fitness Activity Tracker with Sleep Monitor",
-            "category": "Fitness",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Фитнес-трекер",
+            "full_name": "Фитнес-трекер с монитором сна",
+            "category": "Фитнес",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 49.99,
             "weight_kg": 0.02,
             "dimensions_cm": "4x2x1"
         },
         {
             "id": "PROD010",
-            "name": "Backpack",
-            "full_name": "Waterproof Laptop Backpack 15.6 Inch",
-            "category": "Travel",
-            "unit": "piece",
-            "doc_unit": "piece",
+            "name": "Рюкзак",
+            "full_name": "Водонепроницаемый рюкзак для ноутбука 15.6 дюйма",
+            "category": "Путешествия",
+            "unit": "шт.",
+            "doc_unit": "шт.",
             "base_price_usd": 44.99,
             "weight_kg": 0.8,
             "dimensions_cm": "45x30x15"
@@ -309,15 +298,6 @@ class ProductDatabase:
 
     @classmethod
     def find_product_by_name(cls, product_name: str) -> Product:
-        """
-        Find a product by name (case-insensitive).
-
-        Args:
-            product_name: Name of the product to search for.
-
-        Returns:
-            Product: Product object if found, None otherwise.
-        """
         product_name_lower = product_name.lower()
 
         for product in cls.PRODUCTS_DATA:
@@ -329,16 +309,6 @@ class ProductDatabase:
 
     @classmethod
     def generate_supplier_prices(cls, product: Product, config: Config) -> List[Dict[str, Any]]:
-        """
-        Generate supplier prices for a product.
-
-        Args:
-            product: Product to generate prices for.
-            config: Configuration object with cost calculation settings.
-
-        Returns:
-            List[Dict[str, Any]]: List of suppliers with calculated prices.
-        """
         suppliers_with_prices = []
 
         for supplier in SupplierDatabase.get_all_suppliers():
@@ -371,10 +341,10 @@ class ProductDatabase:
                 "final_price_rub": round(final_price_rub, 2),
                 "final_price_usd": round(final_price_rub / config.USD_TO_RUB_EXCHANGE_RATE, 2),
                 "additional_costs_name": random.choice([
-                    "Customs clearance",
-                    "Insurance",
-                    "Packaging",
-                    "Documentation"
+                    "Таможенный контроль",
+                    "Страховка",
+                    "Упаковка",
+                    "Документация"
                 ]),
                 "moq": supplier.min_order_value,
                 "lead_time": supplier.delivery_time
@@ -386,16 +356,6 @@ class ProductDatabase:
 
     @classmethod
     def generate_product_code(cls, product: Product, supplier: Dict[str, Any]) -> str:
-        """
-        Generate a product code for a specific supplier and product.
-
-        Args:
-            product: Product object.
-            supplier: Supplier dictionary.
-
-        Returns:
-            str: Generated product code.
-        """
         now = datetime.now()
         date_str = now.strftime("%d.%m.%Y")
 
@@ -418,7 +378,6 @@ class ProductDatabase:
 
     @staticmethod
     def _convert_supplier_to_dict(supplier: Supplier) -> Dict[str, Any]:
-        """Convert Supplier object to dictionary."""
         return {
             "id": supplier.id,
             "name": supplier.name,
@@ -435,6 +394,5 @@ class ProductDatabase:
         }
 
 
-# Global instances
 supplier_db = SupplierDatabase()
 product_db = ProductDatabase()

@@ -1,5 +1,3 @@
-"""Groq AI integration module for supplier analysis."""
-
 import asyncio
 from typing import List, Dict, Any
 from groq import Groq
@@ -7,10 +5,7 @@ from config import Config
 
 
 class GroqAnalyzer:
-    """Wrapper around Groq AI API for supplier analysis."""
-
     def __init__(self):
-        """Initialize Groq analyzer with configuration."""
         self.client = Groq(api_key=Config.GROQ_API_KEY)
         self.model = Config.GROQ_MODEL
         self.temperature = Config.GROQ_TEMPERATURE
@@ -20,16 +15,6 @@ class GroqAnalyzer:
         product: Dict[str, Any],
         suppliers: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """
-        Analyze suppliers for a specific product.
-
-        Args:
-            product: Product information dictionary.
-            suppliers: List of suppliers with price data.
-
-        Returns:
-            Dict[str, Any]: Analysis results including AI insights and statistics.
-        """
         try:
             sorted_suppliers = sorted(suppliers, key=lambda x: x["final_price_usd"])
             supplier_info = self._format_supplier_info(sorted_suppliers)
@@ -70,15 +55,6 @@ class GroqAnalyzer:
         self,
         products_data: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """
-        Analyze suppliers for multiple products.
-
-        Args:
-            products_data: List of product data with supplier information.
-
-        Returns:
-            List[Dict[str, Any]]: Analysis results for each product.
-        """
         analyses = []
 
         for product_data in products_data:
@@ -103,15 +79,6 @@ class GroqAnalyzer:
         return analyses
 
     def format_analysis_for_telegram(self, analysis: Dict[str, Any]) -> str:
-        """
-        Format analysis results for Telegram messages.
-
-        Args:
-            analysis: Analysis results from Groq.
-
-        Returns:
-            str: Formatted string for Telegram.
-        """
         product_name = analysis["product_name"]
         analysis_text = analysis["analysis"]
         stats = analysis["statistics"]
@@ -135,7 +102,6 @@ class GroqAnalyzer:
         return formatted
 
     def _format_supplier_info(self, suppliers: List[Dict[str, Any]]) -> List[str]:
-        """Format supplier information for AI analysis."""
         supplier_info = []
         for i, supplier in enumerate(suppliers[:5], 1):
             supplier_info.append(
@@ -148,7 +114,6 @@ class GroqAnalyzer:
         return supplier_info
 
     def _get_system_prompt(self) -> str:
-        """Get system prompt for AI analysis."""
         return """Вы эксперт в международной торговле и анализе поставщиков.
         Ваша задача - анализировать поставщиков товаров для e-commerce и предоставлять действенные insights.
 
@@ -167,7 +132,6 @@ class GroqAnalyzer:
         product: Dict[str, Any],
         supplier_info: List[str]
     ) -> str:
-        """Get user prompt for AI analysis."""
         return (
             f"Пожалуйста, проанализируйте поставщиков для следующего товара:\n\n"
             f"ТОВАР: {product['name']}\n"
@@ -184,7 +148,6 @@ class GroqAnalyzer:
         )
 
     def _calculate_statistics(self, suppliers: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate statistics from supplier data."""
         top_5_suppliers = suppliers[:5]
         return {
             "total_suppliers_analyzed": len(suppliers),
@@ -200,5 +163,4 @@ class GroqAnalyzer:
         }
 
 
-# Global instance
 groq_analyzer = GroqAnalyzer()

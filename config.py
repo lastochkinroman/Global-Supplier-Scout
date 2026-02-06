@@ -1,51 +1,32 @@
-"""Configuration module for the Market Research Analyzer Bot."""
-
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 
 class Config:
-    """Bot configuration class with all settings."""
-
-    # Telegram Bot Token
     TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
-    # Groq AI API Key
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
-    # Groq AI Model Configuration
     GROQ_MODEL = "llama3-70b-8192"
     GROQ_TEMPERATURE = 0.7
 
-    # Directories and File Management
     TEMP_DIR = "temp_reports"
 
-    # Business Logic Configuration
     MAX_SUPPLIERS_PER_PRODUCT = 5
 
-    # Cost Calculation Constants (in percentages)
     DEFAULT_DELIVERY_PERCENT = 3.0
     DEFAULT_STORAGE_PERCENT = 2.0
     DEFAULT_ADDITIONAL_COSTS_PERCENT = 1.5
 
-    # Currency Exchange Rate (USD to RUB)
     USD_TO_RUB_EXCHANGE_RATE = 90.0
 
-    # Search Limits
     MAX_PRODUCTS_PER_REQUEST = 5
     MIN_SEARCH_TEXT_LENGTH = 3
 
     @classmethod
     def validate(cls) -> list:
-        """
-        Validate required configuration settings.
-
-        Returns:
-            list: List of missing or invalid configuration keys.
-        """
         errors = []
 
         if not cls.TELEGRAM_TOKEN:
@@ -82,10 +63,4 @@ class Config:
 
     @classmethod
     def is_valid(cls) -> bool:
-        """
-        Check if all required configuration is valid.
-
-        Returns:
-            bool: True if all settings are valid, False otherwise.
-        """
         return len(cls.validate()) == 0
