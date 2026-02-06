@@ -1,15 +1,24 @@
+"""Excel report generation module for supplier analysis."""
+
 import os
 from datetime import datetime
+from typing import List, Dict, Any
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from config import Config
+from database import product_db, Product
+
 
 class ExcelReportGenerator:
+    """Generator for Excel reports from supplier analysis data."""
+
     def __init__(self):
+        """Initialize report generator with default styles."""
         self.reports_dir = Config.TEMP_DIR
         os.makedirs(self.reports_dir, exist_ok=True)
 
+        # Define report styles
         self.header_fill = PatternFill(
             start_color="CCCCCC",
             end_color="CCCCCC",
@@ -26,7 +35,6 @@ class ExcelReportGenerator:
             vertical="center",
             wrap_text=True
         )
-
         self.thin_border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
@@ -34,17 +42,41 @@ class ExcelReportGenerator:
             bottom=Side(style='thin')
         )
 
-    def generate_supplier_analysis_report(self, products_data: list) -> str:
+    def generate_supplier_analysis_report(self, products_data: List[Dict[str, Any]]) -> str:
+        """
+        Generate Excel report with supplier analysis data.
+
+        Args:
+            products_data: List of product data with supplier information.
+
+        Returns:
+            str: Path to generated Excel file.
+        """
         wb = Workbook()
         ws = wb.active
         ws.title = "Supplier Analysis"
 
+        self._add_report_header(ws)
+        self._add_data_headers(ws)
+        self._populate_report_data(ws, products_data)
+        self._auto_resize_columns(ws)
+        self._add_summary_sheet(wb, products_data)
+
+        return self._save_report(wb)
+
+    def _add_report_header(self, ws):
+        """Add title and metadata to report."""
         ws.merge_cells('A1:Z1')
         title_cell = ws['A1']
-        title_cell.value = f"Market Research: Supplier Analysis Report\nGenerated on: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        title_cell.value = (
+            f"Market Research: Supplier Analysis Report\n"
+            f"Generated on: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        )
         title_cell.font = Font(bold=True, size=14)
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
 
+    def _add_data_headers(self, ws):
+        """Add column headers to report."""
         headers = [
             "No.", "Product Code", "Product Name", "Full Product Name",
             "Category", "Unit", "Doc Unit", "Base Price (USD)",
@@ -65,28 +97,28 @@ class ExcelReportGenerator:
             cell.alignment = self.center_alignment
             cell.border = self.thin_border
 
+    def _populate_report_data(self, ws, products_data: List[Dict[str, Any]]):
+        """Populate report with product and supplier data."""
         row_idx = 4
         current_year = datetime.now().year
         current_quarter = (datetime.now().month - 1) // 3 + 1
 
         for product_data in products_data:
-            product = product_data["product"]
+            product: Product = product_data["product"]
             suppliers = product_data["suppliers"][:Config.MAX_SUPPLIERS_PER_PRODUCT]
 
             for supplier_idx, supplier in enumerate(suppliers, 1):
                 product_code = product_db.generate_product_code(product, supplier)
 
-                usd_to_rub = 90
-
                 row_data = [
                     supplier_idx,
                     product_code,
-                    product["name"],
-                    product["full_name"],
-                    product["category"],
-                    product["unit"],
-                    product["doc_unit"],
-                    product["base_price_usd"],
+                    product.name,
+                    product.full_name,
+                    product.category,
+                    product.unit,
+                    product.doc_unit,
+                    product.base_price_usd,
                     supplier["name"],
                     supplier["country"],
                     supplier["rating"],
@@ -107,8 +139,8 @@ class ExcelReportGenerator:
                     supplier["status"],
                     supplier["url"],
                     supplier["tax_id"],
-                    product["weight_kg"],
-                    product["dimensions_cm"],
+                    product.weight_kg,
+                    product.dimensions_cm,
                     current_year,
                     current_quarter
                 ]
@@ -130,6 +162,8 @@ class ExcelReportGenerator:
 
             row_idx += 1
 
+    def _auto_resize_columns(self, ws):
+        """Auto-resize columns based on content length."""
         for column in ws.columns:
             max_length = 0
             column_letter = get_column_letter(column[0].column)
@@ -144,16 +178,8 @@ class ExcelReportGenerator:
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
 
-        self._add_summary_sheet(wb, products_data)
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"supplier_analysis_{timestamp}.xlsx"
-        filepath = os.path.join(self.reports_dir, filename)
-
-        wb.save(filepath)
-        return filepath
-
-    def _add_summary_sheet(self, wb: Workbook, products_data: list):
+    def _add_summary_sheet(self, wb, products_data: List[Dict[str, Any]]):
+        """Add summary sheet with key statistics."""
         ws = wb.create_sheet(title="Summary")
 
         ws.merge_cells('A1:E1')
@@ -177,7 +203,7 @@ class ExcelReportGenerator:
                 best_supplier = min(suppliers, key=lambda x: x["final_price_usd"])
 
                 row_data = [
-                    product["name"],
+                    product.name,
                     best_supplier["name"],
                     best_supplier["final_price_usd"],
                     best_supplier["lead_time"],
@@ -208,4 +234,14 @@ class ExcelReportGenerator:
             adjusted_width = min(max_length + 2, 30)
             ws.column_dimensions[column_letter].width = adjusted_width
 
+    def _save_report(self, wb: Workbook) -> str:
+        """Save workbook to file and return file path."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"supplier_analysis_{timestamp}.xlsx"
+        filepath = os.path.join(self.reports_dir, filename)
+        wb.save(filepath)
+        return filepath
+
+
+# Global instance
 report_generator = ExcelReportGenerator()

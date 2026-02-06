@@ -1,3 +1,5 @@
+"""Main Telegram bot for Market Research Analyzer."""
+
 import os
 import asyncio
 import logging
@@ -8,10 +10,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.constants import ParseMode
 
 from config import Config
-from database import product_db
+from database import product_db, Product
 from excel_generator import report_generator
 from groq_analyzer import groq_analyzer
 
+# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -20,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send welcome message to new users."""
     welcome_text = """
 📊 **Бот Анализа Рынка Поставщиков**
 
@@ -50,6 +54,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send help information about bot usage."""
     help_text = """
 📋 **Использование Бота Анализа Рынка**
 
@@ -84,6 +89,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send example product search queries."""
     examples_text = """
 🎯 **Примеры продуктов для анализа:**
 
@@ -122,10 +128,11 @@ async def examples_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle product search requests from users."""
     user = update.effective_user
     search_text = update.message.text.strip()
 
-    if len(search_text) < 3:
+    if len(search_text) < Config.MIN_SEARCH_TEXT_LENGTH:
         await update.message.reply_text(
             "🔍 Пожалуйста, введите не менее 3 символов для поиска.",
             parse_mode=ParseMode.MARKDOWN
@@ -138,7 +145,7 @@ async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     product_names = [name.strip() for name in search_text.split(',')]
-    product_names = [name for name in product_names if len(name) > 0][:5]
+    product_names = [name for name in product_names if len(name) > 0][:Config.MAX_PRODUCTS_PER_REQUEST]
 
     if not product_names:
         await update.message.reply_text(
@@ -147,15 +154,7 @@ async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
-    found_products = []
-    not_found_products = []
-
-    for name in product_names:
-        product = product_db.find_product_by_name(name)
-        if product:
-            found_products.append(product)
-        else:
-            not_found_products.append(name)
+    found_products, not_found_products = _search_products(product_names)
 
     if not found_products:
         await update.message.reply_text(
@@ -164,43 +163,19 @@ async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return
 
-    status_text = f"""
-📊 **Результаты поиска:**
-• Найдено: {len(found_products)} продукт(ов)
-• Не найдено: {len(not_found_products)} продукт(ов)
-
-Анализируем международных поставщиков...
-Это может занять некоторое время ⏳
-    """
-
-    if not_found_products:
-        status_text += f"\n❌ Не найдено: {', '.join(not_found_products)}"
-
+    status_text = _format_search_status(found_products, not_found_products)
     status_msg = await update.message.reply_text(status_text, parse_mode=ParseMode.MARKDOWN)
 
     try:
-        products_data = []
-
-        for product in found_products:
-            suppliers = product_db.generate_supplier_prices(product, Config)
-
-            sorted_suppliers = sorted(suppliers, key=lambda x: x["final_price_usd"])
-
-            products_data.append({
-                "product": product,
-                "suppliers": sorted_suppliers
-            })
+        products_data = await _process_products(found_products)
 
         await status_msg.edit_text("📊 Генерация отчета Excel...")
-
         report_path = report_generator.generate_supplier_analysis_report(products_data)
 
         await status_msg.edit_text("🤖 Анализ поставщиков с помощью AI...")
-
         analyses = await groq_analyzer.analyze_multiple_products(products_data)
 
         await send_analysis_results(update, analyses, report_path)
-
         await status_msg.delete()
 
     except Exception as e:
@@ -211,7 +186,54 @@ async def handle_product_search(update: Update, context: ContextTypes.DEFAULT_TY
         )
 
 
+def _search_products(product_names: list) -> tuple:
+    """Search for products in database."""
+    found_products = []
+    not_found_products = []
+
+    for name in product_names:
+        product = product_db.find_product_by_name(name)
+        if product:
+            found_products.append(product)
+        else:
+            not_found_products.append(name)
+
+    return found_products, not_found_products
+
+
+def _format_search_status(found_products: list, not_found_products: list) -> str:
+    """Format search status message."""
+    status_text = (
+        f"\n📊 **Результаты поиска:**\n"
+        f"• Найдено: {len(found_products)} продукт(ов)\n"
+        f"• Не найдено: {len(not_found_products)} продукт(ов)\n\n"
+        "Анализируем международных поставщиков...\n"
+        "Это может занять некоторое время ⏳"
+    )
+
+    if not_found_products:
+        status_text += f"\n❌ Не найдено: {', '.join(not_found_products)}"
+
+    return status_text
+
+
+async def _process_products(found_products: list) -> list:
+    """Process products to get supplier prices."""
+    products_data = []
+
+    for product in found_products:
+        suppliers = product_db.generate_supplier_prices(product, Config)
+        sorted_suppliers = sorted(suppliers, key=lambda x: x["final_price_usd"])
+        products_data.append({
+            "product": product,
+            "suppliers": sorted_suppliers
+        })
+
+    return products_data
+
+
 async def send_analysis_results(update: Update, analyses: list, report_path: str):
+    """Send analysis results to user."""
     try:
         analysis_header = """
 📈 **РЕЗУЛЬТАТЫ АНАЛИЗА ПОСТАВЩИКОВ**
@@ -274,14 +296,17 @@ async def send_analysis_results(update: Update, analyses: list, report_path: str
 
 
 def main():
-    if not Config.TELEGRAM_TOKEN:
-        logger.error("❌ TELEGRAM_BOT_TOKEN не найден в .env")
+    """Main bot entry point."""
+    # Validate configuration
+    config_errors = Config.validate()
+    if config_errors:
+        logger.error("❌ Configuration errors: %s", ", ".join(config_errors))
         return
 
-    if not Config.GROQ_API_KEY:
-        logger.error("❌ GROQ_API_KEY не найден в .env")
-        return
+    # Create temporary directory if not exists
+    Path(Config.TEMP_DIR).mkdir(exist_ok=True)
 
+    # Initialize and run bot
     application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start_command))
@@ -300,6 +325,4 @@ def main():
 
 
 if __name__ == '__main__':
-    Path(Config.TEMP_DIR).mkdir(exist_ok=True)
-
     main()

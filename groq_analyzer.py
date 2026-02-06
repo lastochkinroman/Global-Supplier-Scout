@@ -1,58 +1,41 @@
+"""Groq AI integration module for supplier analysis."""
+
 import asyncio
 from typing import List, Dict, Any
 from groq import Groq
 from config import Config
 
+
 class GroqAnalyzer:
+    """Wrapper around Groq AI API for supplier analysis."""
+
     def __init__(self):
+        """Initialize Groq analyzer with configuration."""
         self.client = Groq(api_key=Config.GROQ_API_KEY)
         self.model = Config.GROQ_MODEL
         self.temperature = Config.GROQ_TEMPERATURE
 
-    async def analyze_product_suppliers(self, product: Dict[str, Any], suppliers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def analyze_product_suppliers(
+        self,
+        product: Dict[str, Any],
+        suppliers: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Analyze suppliers for a specific product.
+
+        Args:
+            product: Product information dictionary.
+            suppliers: List of suppliers with price data.
+
+        Returns:
+            Dict[str, Any]: Analysis results including AI insights and statistics.
+        """
         try:
             sorted_suppliers = sorted(suppliers, key=lambda x: x["final_price_usd"])
+            supplier_info = self._format_supplier_info(sorted_suppliers)
 
-            supplier_info = []
-            for i, supplier in enumerate(sorted_suppliers[:5], 1):
-                supplier_info.append(
-                    f"{i}. {supplier['name']} ({supplier['country']}): "
-                    f"${supplier['final_price_usd']:.2f}, "
-                    f"Rating: {supplier['rating']}/5, "
-                    f"Lead Time: {supplier['lead_time']}, "
-                    f"MOQ: ${supplier['moq']}"
-                )
-
-            system_prompt = """Вы эксперт в международной торговле и анализе поставщиков.
-            Ваша задача - анализировать поставщиков товаров для e-commerce и предоставлять действенные insights.
-
-            Анализируйте каждого поставщика по:
-            1. Конкурентоспособность цены
-            2. Время доставки и надежность
-            3. Репутация поставщика (рейтинг)
-            4. Минимальные требования к заказу
-            5. Географические преимущества/недостатки
-            6. Общая оценка рисков
-
-            Предоставляйте рекомендации в структурированном формате."""
-
-            user_prompt = f"""Пожалуйста, проанализируйте поставщиков для следующего товара:
-
-            ТОВАР: {product['name']}
-            КАТЕГОРИЯ: {product['category']}
-            БАЗОВЫЙ ДИАПАЗОН ЦЕН: ${product['base_price_usd']:.2f}
-
-            ТОП ПОСТАВЩИКИ:
-            {' | '.join(supplier_info)}
-
-            Пожалуйста, предоставьте:
-            1. ЛУЧШИЙ ВЫБОР: Какой поставщик предлагает лучшую ценность?
-            2. БЮДЖЕТНЫЙ ВАРИАНТ: Лучший вариант для низкого бюджета?
-            3. ПРЕМИУМ ВАРИАНТ: Лучший для качества/надежности?
-            4. ОЦЕНКА РИСКОВ: Есть ли красные флаги?
-            5. РЕКОМЕНДАЦИЯ: Общая рекомендация с обоснованием.
-
-            Форматируйте ответ четко с маркерами и эмодзи."""
+            system_prompt = self._get_system_prompt()
+            user_prompt = self._get_user_prompt(product, supplier_info)
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -65,16 +48,7 @@ class GroqAnalyzer:
             )
 
             analysis = response.choices[0].message.content.strip()
-
-            stats = {
-                "total_suppliers_analyzed": len(sorted_suppliers),
-                "price_range_usd": f"${sorted_suppliers[0]['final_price_usd']:.2f} - ${sorted_suppliers[-1]['final_price_usd']:.2f}",
-                "average_rating": sum(s['rating'] for s in sorted_suppliers[:5]) / 5,
-                "best_supplier": sorted_suppliers[0]['name'],
-                "best_price_usd": sorted_suppliers[0]['final_price_usd'],
-                "worst_supplier": sorted_suppliers[-1]['name'],
-                "worst_price_usd": sorted_suppliers[-1]['final_price_usd']
-            }
+            stats = self._calculate_statistics(sorted_suppliers)
 
             return {
                 "product_name": product["name"],
@@ -92,7 +66,19 @@ class GroqAnalyzer:
                 "top_suppliers": []
             }
 
-    async def analyze_multiple_products(self, products_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def analyze_multiple_products(
+        self,
+        products_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Analyze suppliers for multiple products.
+
+        Args:
+            products_data: List of product data with supplier information.
+
+        Returns:
+            List[Dict[str, Any]]: Analysis results for each product.
+        """
         analyses = []
 
         for product_data in products_data:
@@ -117,28 +103,102 @@ class GroqAnalyzer:
         return analyses
 
     def format_analysis_for_telegram(self, analysis: Dict[str, Any]) -> str:
+        """
+        Format analysis results for Telegram messages.
+
+        Args:
+            analysis: Analysis results from Groq.
+
+        Returns:
+            str: Formatted string for Telegram.
+        """
         product_name = analysis["product_name"]
         analysis_text = analysis["analysis"]
         stats = analysis["statistics"]
 
-        formatted = f"""
-📦 **{product_name.upper()} - АНАЛИЗ ПОСТАВЩИКОВ**
-
-{analysis_text}
-
-📊 **БЫСТРАЯ СТАТИСТИКА:**
-• Поставщики проанализированы: {stats.get('total_suppliers_analyzed', 'N/A')}
-• Диапазон цен: {stats.get('price_range_usd', 'N/A')}
-• Средний рейтинг: {stats.get('average_rating', 'N/A'):.1f}/5
-• Лучшая цена: ${stats.get('best_price_usd', 'N/A'):.2f} ({stats.get('best_supplier', 'N/A')})
-
-💡 **СЛЕДУЮЩИЕ ШАГИ:**
-1. Свяжитесь с топ 3 поставщиками для образцов
-2. Обсудите лучшие условия MOQ
-3. Запросите сертификаты продукта
-4. Проверьте стоимость доставки
-        """
+        formatted = (
+            f"\n📦 **{product_name.upper()} - АНАЛИЗ ПОСТАВЩИКОВ**\n\n"
+            f"{analysis_text}\n\n"
+            "📊 **БЫСТРАЯ СТАТИСТИКА:**\n"
+            f"• Поставщики проанализированы: {stats.get('total_suppliers_analyzed', 'N/A')}\n"
+            f"• Диапазон цен: {stats.get('price_range_usd', 'N/A')}\n"
+            f"• Средний рейтинг: {stats.get('average_rating', 'N/A'):.1f}/5\n"
+            f"• Лучшая цена: ${stats.get('best_price_usd', 'N/A'):.2f} "
+            f"({stats.get('best_supplier', 'N/A')})\n\n"
+            "💡 **СЛЕДУЮЩИЕ ШАГИ:**\n"
+            "1. Свяжитесь с топ 3 поставщиками для образцов\n"
+            "2. Обсудите лучшие условия MOQ\n"
+            "3. Запросите сертификаты продукта\n"
+            "4. Проверьте стоимость доставки"
+        )
 
         return formatted
 
+    def _format_supplier_info(self, suppliers: List[Dict[str, Any]]) -> List[str]:
+        """Format supplier information for AI analysis."""
+        supplier_info = []
+        for i, supplier in enumerate(suppliers[:5], 1):
+            supplier_info.append(
+                f"{i}. {supplier['name']} ({supplier['country']}): "
+                f"${supplier['final_price_usd']:.2f}, "
+                f"Rating: {supplier['rating']}/5, "
+                f"Lead Time: {supplier['lead_time']}, "
+                f"MOQ: ${supplier['moq']}"
+            )
+        return supplier_info
+
+    def _get_system_prompt(self) -> str:
+        """Get system prompt for AI analysis."""
+        return """Вы эксперт в международной торговле и анализе поставщиков.
+        Ваша задача - анализировать поставщиков товаров для e-commerce и предоставлять действенные insights.
+
+        Анализируйте каждого поставщика по:
+        1. Конкурентоспособность цены
+        2. Время доставки и надежность
+        3. Репутация поставщика (рейтинг)
+        4. Минимальные требования к заказу
+        5. Географические преимущества/недостатки
+        6. Общая оценка рисков
+
+        Предоставляйте рекомендации в структурированном формате."""
+
+    def _get_user_prompt(
+        self,
+        product: Dict[str, Any],
+        supplier_info: List[str]
+    ) -> str:
+        """Get user prompt for AI analysis."""
+        return (
+            f"Пожалуйста, проанализируйте поставщиков для следующего товара:\n\n"
+            f"ТОВАР: {product['name']}\n"
+            f"КАТЕГОРИЯ: {product['category']}\n"
+            f"БАЗОВЫЙ ДИАПАЗОН ЦЕН: ${product['base_price_usd']:.2f}\n\n"
+            f"ТОП ПОСТАВЩИКИ:\n{' | '.join(supplier_info)}\n\n"
+            "Пожалуйста, предоставьте:\n"
+            "1. ЛУЧШИЙ ВЫБОР: Какой поставщик предлагает лучшую ценность?\n"
+            "2. БЮДЖЕТНЫЙ ВАРИАНТ: Лучший вариант для низкого бюджета?\n"
+            "3. ПРЕМИУМ ВАРИАНТ: Лучший для качества/надежности?\n"
+            "4. ОЦЕНКА РИСКОВ: Есть ли красные флаги?\n"
+            "5. РЕКОМЕНДАЦИЯ: Общая рекомендация с обоснованием.\n\n"
+            "Форматируйте ответ четко с маркерами и эмодзи."
+        )
+
+    def _calculate_statistics(self, suppliers: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate statistics from supplier data."""
+        top_5_suppliers = suppliers[:5]
+        return {
+            "total_suppliers_analyzed": len(suppliers),
+            "price_range_usd": (
+                f"${suppliers[0]['final_price_usd']:.2f} - "
+                f"${suppliers[-1]['final_price_usd']:.2f}"
+            ),
+            "average_rating": sum(s['rating'] for s in top_5_suppliers) / 5,
+            "best_supplier": suppliers[0]['name'],
+            "best_price_usd": suppliers[0]['final_price_usd'],
+            "worst_supplier": suppliers[-1]['name'],
+            "worst_price_usd": suppliers[-1]['final_price_usd']
+        }
+
+
+# Global instance
 groq_analyzer = GroqAnalyzer()

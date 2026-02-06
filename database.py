@@ -1,10 +1,48 @@
+"""Database module for product and supplier data management."""
+
 import random
 from typing import List, Dict, Any
-import uuid
 from datetime import datetime
+from config import Config
+
+
+class Supplier:
+    """Data class representing a supplier."""
+
+    def __init__(self, supplier_data: Dict[str, Any]):
+        self.id: str = supplier_data["id"]
+        self.name: str = supplier_data["name"]
+        self.full_name: str = supplier_data["full_name"]
+        self.region: str = supplier_data["region"]
+        self.country: str = supplier_data["country"]
+        self.url: str = supplier_data["url"]
+        self.tax_id: str = supplier_data["tax_id"]
+        self.warehouse_location: str = supplier_data["warehouse_location"]
+        self.status: str = supplier_data["status"]
+        self.rating: float = supplier_data["rating"]
+        self.delivery_time: str = supplier_data["delivery_time"]
+        self.min_order_value: float = supplier_data["min_order_value"]
+
+
+class Product:
+    """Data class representing a product."""
+
+    def __init__(self, product_data: Dict[str, Any]):
+        self.id: str = product_data["id"]
+        self.name: str = product_data["name"]
+        self.full_name: str = product_data["full_name"]
+        self.category: str = product_data["category"]
+        self.unit: str = product_data["unit"]
+        self.doc_unit: str = product_data["doc_unit"]
+        self.base_price_usd: float = product_data["base_price_usd"]
+        self.weight_kg: float = product_data["weight_kg"]
+        self.dimensions_cm: str = product_data["dimensions_cm"]
+
 
 class SupplierDatabase:
-    SUPPLIERS = [
+    """Database for managing supplier data."""
+
+    SUPPLIERS_DATA = [
         {
             "id": "SUP001",
             "name": "Global Suppliers Inc.",
@@ -147,8 +185,16 @@ class SupplierDatabase:
         }
     ]
 
+    @classmethod
+    def get_all_suppliers(cls) -> List[Supplier]:
+        """Get all suppliers as Supplier objects."""
+        return [Supplier(data) for data in cls.SUPPLIERS_DATA]
+
+
 class ProductDatabase:
-    PRODUCTS = [
+    """Database for managing product data and price generation."""
+
+    PRODUCTS_DATA = [
         {
             "id": "PROD001",
             "name": "Wireless Earbuds",
@@ -261,42 +307,59 @@ class ProductDatabase:
         }
     ]
 
-    @staticmethod
-    def find_product_by_name(product_name: str) -> Dict[str, Any]:
+    @classmethod
+    def find_product_by_name(cls, product_name: str) -> Product:
+        """
+        Find a product by name (case-insensitive).
+
+        Args:
+            product_name: Name of the product to search for.
+
+        Returns:
+            Product: Product object if found, None otherwise.
+        """
         product_name_lower = product_name.lower()
 
-        for product in ProductDatabase.PRODUCTS:
+        for product in cls.PRODUCTS_DATA:
             if (product_name_lower in product["name"].lower() or
                 product_name_lower in product["full_name"].lower()):
-                return product.copy()
+                return Product(product)
 
         return None
 
-    @staticmethod
-    def generate_supplier_prices(product: Dict[str, Any], config) -> List[Dict[str, Any]]:
+    @classmethod
+    def generate_supplier_prices(cls, product: Product, config: Config) -> List[Dict[str, Any]]:
+        """
+        Generate supplier prices for a product.
+
+        Args:
+            product: Product to generate prices for.
+            config: Configuration object with cost calculation settings.
+
+        Returns:
+            List[Dict[str, Any]]: List of suppliers with calculated prices.
+        """
         suppliers_with_prices = []
 
-        for supplier in SupplierDatabase.SUPPLIERS:
-            supplier_copy = supplier.copy()
+        for supplier in SupplierDatabase.get_all_suppliers():
+            supplier_data = cls._convert_supplier_to_dict(supplier)
 
             price_variation = 0.85 + (random.random() * 0.35)
-
-            base_price = product["base_price_usd"]
+            base_price = product.base_price_usd
             supplier_price_usd = round(base_price * price_variation, 2)
 
             delivery_cost_percent = config.DEFAULT_DELIVERY_PERCENT + random.uniform(-1, 1)
             storage_cost_percent = config.DEFAULT_STORAGE_PERCENT
             additional_costs_percent = config.DEFAULT_ADDITIONAL_COSTS_PERCENT + random.uniform(-0.5, 0.5)
 
-            usd_to_rub = 90
-            price_rub = supplier_price_usd * usd_to_rub
+            price_rub = supplier_price_usd * config.USD_TO_RUB_EXCHANGE_RATE
             delivery_cost_rub = price_rub * (delivery_cost_percent / 100)
             storage_cost_rub = price_rub * (storage_cost_percent / 100)
             additional_costs_rub = price_rub * (additional_costs_percent / 100)
 
             final_price_rub = price_rub + delivery_cost_rub + storage_cost_rub + additional_costs_rub
 
-            supplier_copy.update({
+            supplier_data.update({
                 "price_usd": supplier_price_usd,
                 "price_rub": round(price_rub, 2),
                 "delivery_cost_percent": round(delivery_cost_percent, 2),
@@ -306,23 +369,33 @@ class ProductDatabase:
                 "additional_costs_percent": round(additional_costs_percent, 2),
                 "additional_costs_rub": round(additional_costs_rub, 2),
                 "final_price_rub": round(final_price_rub, 2),
-                "final_price_usd": round(final_price_rub / usd_to_rub, 2),
+                "final_price_usd": round(final_price_rub / config.USD_TO_RUB_EXCHANGE_RATE, 2),
                 "additional_costs_name": random.choice([
                     "Customs clearance",
                     "Insurance",
                     "Packaging",
                     "Documentation"
                 ]),
-                "moq": supplier["min_order_value"],
-                "lead_time": supplier["delivery_time"]
+                "moq": supplier.min_order_value,
+                "lead_time": supplier.delivery_time
             })
 
-            suppliers_with_prices.append(supplier_copy)
+            suppliers_with_prices.append(supplier_data)
 
         return suppliers_with_prices
 
-    @staticmethod
-    def generate_product_code(product: Dict[str, Any], supplier: Dict[str, Any]) -> str:
+    @classmethod
+    def generate_product_code(cls, product: Product, supplier: Dict[str, Any]) -> str:
+        """
+        Generate a product code for a specific supplier and product.
+
+        Args:
+            product: Product object.
+            supplier: Supplier dictionary.
+
+        Returns:
+            str: Generated product code.
+        """
         now = datetime.now()
         date_str = now.strftime("%d.%m.%Y")
 
@@ -341,7 +414,27 @@ class ProductDatabase:
 
         region_code = region_codes.get(supplier.get("country", ""), "XX")
 
-        return f"MR_{region_code}_{supplier['id']}_{product['id']}_{date_str}"
+        return f"MR_{region_code}_{supplier['id']}_{product.id}_{date_str}"
 
+    @staticmethod
+    def _convert_supplier_to_dict(supplier: Supplier) -> Dict[str, Any]:
+        """Convert Supplier object to dictionary."""
+        return {
+            "id": supplier.id,
+            "name": supplier.name,
+            "full_name": supplier.full_name,
+            "region": supplier.region,
+            "country": supplier.country,
+            "url": supplier.url,
+            "tax_id": supplier.tax_id,
+            "warehouse_location": supplier.warehouse_location,
+            "status": supplier.status,
+            "rating": supplier.rating,
+            "delivery_time": supplier.delivery_time,
+            "min_order_value": supplier.min_order_value
+        }
+
+
+# Global instances
 supplier_db = SupplierDatabase()
 product_db = ProductDatabase()
